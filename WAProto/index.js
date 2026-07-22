@@ -12,18 +12,14 @@ function longToString(value, unsigned) {
 	if (typeof value === "number") {
 		return String(value);
 	}
-	// Fast path: convert Long {low, high} directly via native BigInt
-	// BigInt.toString() is a native C++ operation, much faster than Long's pure JS division loops
-	if (value && typeof value.low === "number" && typeof value.high === "number") {
-		const lo = BigInt(value.low >>> 0);
-		const hi = BigInt(value.high >>> 0);
-		const combined = (hi << 32n) | lo;
-		if (!unsigned && value.high < 0) {
-			return (combined - (1n << 64n)).toString();
-		}
-		return combined.toString();
+	if (!$util.Long) {
+		return String(value);
 	}
-	return String(value);
+	const normalized = $util.Long.fromValue(value);
+	const prepared = unsigned && normalized && typeof normalized.toUnsigned === "function"
+		? normalized.toUnsigned()
+		: normalized;
+	return prepared.toString();
 }
 
 function longToNumber(value, unsigned) {
@@ -31,19 +27,19 @@ function longToNumber(value, unsigned) {
 		return value;
 	}
 	if (typeof value === "string") {
+		const numeric = Number(value);
+		return numeric;
+	}
+	if (!$util.Long) {
 		return Number(value);
 	}
-	// Fast path: convert Long {low, high} directly via native BigInt
-	if (value && typeof value.low === "number" && typeof value.high === "number") {
-		const lo = BigInt(value.low >>> 0);
-		const hi = BigInt(value.high >>> 0);
-		const combined = (hi << 32n) | lo;
-		if (!unsigned && value.high < 0) {
-			return Number(combined - (1n << 64n));
-		}
-		return Number(combined);
-	}
-	return Number(value);
+	const normalized = $util.Long.fromValue(value);
+	const prepared = unsigned && normalized && typeof normalized.toUnsigned === "function"
+		? normalized.toUnsigned()
+		: typeof normalized.toSigned === "function"
+			? normalized.toSigned()
+			: normalized;
+	return prepared.toNumber();
 }
 
 export const proto = $root.proto = (() => {
