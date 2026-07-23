@@ -295,7 +295,7 @@ export const extractImageThumb = async (bufferOrFilePath: Readable | Buffer | st
 				height: dimensions.height
 			}
 		}
-	} else if ('jimp' in lib && typeof lib.jimp?.Jimp === 'object') {
+	} else if ('jimp' in lib && typeof lib.jimp?.Jimp === 'function') {
 		const jimp = await (lib.jimp.Jimp as any).read(bufferOrFilePath)
 		const dimensions = {
 			width: jimp.width,
@@ -1209,12 +1209,11 @@ export const resizeImage = async (
 
 	//@ts-ignore
 	const jimpMod = await import('jimp').catch(() => undefined)
-	if (jimpMod) {
-		const Jimp = (jimpMod as any).default || jimpMod
+	if (jimpMod && typeof (jimpMod as any).Jimp === 'function') {
+		const Jimp = (jimpMod as any).Jimp
 		const img = await Jimp.read(buf)
-		img.resize(width, height)
-		img.quality(quality)
-		return img.getBufferAsync(Jimp.MIME_JPEG)
+		img.resize({ w: width, h: height })
+		return img.getBuffer('image/jpeg', { quality })
 	}
 
 	throw new Boom('resizeImage requires "sharp" or "jimp" to be installed', { statusCode: 500 })
